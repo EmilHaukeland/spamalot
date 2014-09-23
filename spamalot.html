@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Spamalot</title>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jquery.bootstrapvalidator/0.5.1/css/bootstrapValidator.min.css"/>
+    <link rel="icon" type="image/jpg" href="http://www.officiallondontheatre.co.uk/servlet/file/store5/item163768/version2/fileservice2/163768_2_preview.jpg">
+    <script type="text/javascript" src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript" src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery.bootstrapvalidator/0.5.1/js/bootstrapValidator.min.js"></script>
+    <script type="text/javascript">
+        var spamalot = function(element)
+        {
+            var el = $(element),
+                    form = el.find('form'),
+                    requestData = el.find('[data-role=request-data]');
+
+            el.find('select').change(setRequestDataVisibility);
+            form.submit(submitForm);
+
+            function setRequestDataVisibility(e)
+            {
+                if(['POST', 'PUT'].indexOf(e.currentTarget.value) >= 0)
+                {
+                    requestData.show();
+                }
+                else
+                {
+                    requestData.hide();
+                }
+            }
+
+            function submitForm(e)
+            {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                var elements = e.currentTarget.elements;
+
+                var request = {
+                    url: elements.url.value,
+                    type: elements.type.value,
+                    data: {}
+                };
+
+                request.data[elements.key.value] = elements.data.value;
+
+                spam(request, elements.times.value);
+            }
+
+            function spam(request, count)
+            {
+                requestLog.clear();
+                count = parseInt(count, 10);
+                for(var i = 0; i < count; i++)
+                {
+                    sendRequest(i, request);
+                }
+            }
+
+            function sendRequest(id, request)
+            {
+                console.log(request);
+                $.ajax(request)
+                        .success(function(error, content, promise)
+                        {
+                            requestLog.addLogLine(id, promise);
+                        })
+                        .error(function(promise)
+                        {
+                            requestLog.addLogLine(id, promise);
+                        });
+            }
+
+            var requestLog = {
+
+                logElement: el.find('[data-role=request-log] tbody'),
+
+                addLogLine: function(id, response)
+                {
+                    var tableRow = $('<tr/>');
+                    tableRow.append($('<td/>').text(id));
+                    tableRow.append($('<td/>').text(response.status));
+                    tableRow.append($('<td/>').text(response.statusText));
+                    tableRow.append($('<td class="text-right"/>').append(function()
+                    {
+                        if(response.status != 204)
+                        {
+                            if(response.responseText.trim().length == 0)
+                            {
+                                return 'No data';
+                            }
+
+                            return $('<a data-role="popover"><span class="glyphicon glyphicon-file"></span></a>')
+                                    .attr('title', response.statusText)
+                                    .attr('data-content', response.responseText)
+                                    .popover();
+                        }
+                    }));
+
+                    this.logElement.append(tableRow);
+                },
+
+                clear: function()
+                {
+                    this.logElement.html('');
+                }
+            };
+        };
+    </script>
+    <style>
+        #content
+        {
+            width: 400px;
+            height: 400px;
+            margin: 40px auto 0 auto;
+        }
+
+        #content th
+        {
+            width: 50px;
+        }
+
+        #content th:first-child
+        {
+            width: 30px;
+        }
+
+        #content th:last-child
+        {
+            width: 318px;
+        }
+
+        #content form label
+        {
+            display: block;
+        }
+
+        #url
+        {
+            display: inline-block;
+            width: 311px;
+        }
+
+        #type
+        {
+            display: inline-block;
+            width: auto;
+        }
+
+        #key
+        {
+            display: inline-block;
+            width: 100px;
+        }
+
+        #data
+        {
+            display: inline-block;
+            width: 296px;
+        }
+
+        #content div[data-role=request-data] span[data-label=data]
+        {
+            display: block;
+        }
+
+        #content div[data-role=request-data] span
+        {
+            display: inline-block;
+            font-weight: bold;
+        }
+
+        #content div[data-role=request-data] span[data-label=key]
+        {
+            width: 105px;
+        }
+
+        #content div[data-role=request-data] span[data-label=value]
+        {
+            width: 200px;
+        }
+
+        #content div[data-role=request-data]
+        {
+            display: none;
+        }
+
+        #times
+        {
+            display: inline-block;
+            width: 311px;
+        }
+
+        input[type=submit]
+        {
+            width: 85px;
+        }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <form role="form">
+            <div class="form-group">
+                <label for="url">Url to spam</label>
+                <input type="url" id="url" allowLocal="true" message="Invalid URL" required="required" class="form-control" />
+                <select id="type" class="form-control">
+                    <option selected="selected">GET</option>
+                    <option>PUT</option>
+                    <option>POST</option>
+                    <option>DELETE</option>
+                </select>
+            </div>
+            <div data-role="request-data">
+                <div class="form-group">
+                    <span data-label="data">Request data</span>
+                </div>
+                <div class="form-group">
+                    <span data-label="key">Key</span><span data-label="value">Value</span>
+                    <input type="text" class="form-control" id="key" />
+                    <input type="text" class="form-control" id="data" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="times">Requests (fired semi-concurrent)</label>
+                <input type="text" class="form-control" id="times" value="3" />
+                <input type="submit" class="btn btn-default" value="Spam" />
+            </div>
+        </form>
+        <p><strong>Request log</strong></p>
+        <table data-role="request-log" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Status</th>
+                    <th colspan="2">Text</th>
+                </tr>
+            </thead>
+            <tbody>
+
+            </tbody>
+        </table>
+    </div>
+    <script type="text/javascript">
+        $(document).ready(function()
+        {
+            spamalot('#content');
+        });
+    </script>
+</body>
+</html>
